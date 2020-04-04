@@ -1,3 +1,5 @@
+# DbSync - Data synchronization in tables of two databases
+
 Usage: dbsync [options] TableFile SqlDriver Source Destination
 Data synchronization in tables of two databases
 
@@ -13,7 +15,14 @@ Options:
 
 Arguments:
   TableFile       Path to table data file.
-  SqlDriver       Driver name for connecting to the database
+  SqlDriver       Driver name for connecting to the database: QOCI QPSQL
   Source          Source Db: user/password@alias[:host]
   Destination     Destination Db: user/password@alias[:host]
 
+TableFile:
+	table columns
+	key table columns
+	name table
+	[condition (where)]
+	[triggers]
+  
