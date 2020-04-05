@@ -1,4 +1,5 @@
-# DbSync - Data synchronization in tables of two databases
+DbSync - Data synchronization in tables of two databases
+This utility allows you to fix errors in the failure of data replication.
 
 Usage: dbsync [options] TableFile SqlDriver Source Destination
 Data synchronization in tables of two databases
@@ -25,4 +26,10 @@ TableFile:
 	name table
 	[condition (where)]
 	[triggers]
-  
+
+Program start:
+1. determine the existence and type of differences in the tables: "dbsync -l -x ..."
+2. synchronize data in tables: "dbsync -l ..."
+3. check the log file
+
+The Examples folder contains examples of tables and calls to the program.
