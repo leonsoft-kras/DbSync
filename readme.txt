@@ -27,6 +27,11 @@ TableFile:
 	[condition (where)]
 	[triggers]
 
+note:
+key table columns - columns to define unique rows;
+where - processing only part of the data in the table;
+triggers - disabling replication triggers during data synchronization.
+  
 Program start:
 1. determine the existence and type of differences in the tables: "dbsync -l -x ..."
 2. synchronize data in tables: "dbsync -l ..."
