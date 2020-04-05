@@ -1,5 +1,7 @@
 # DbSync
+
 **Data synchronization in tables of two databases**
+
 *This utility allows you to fix errors in the failure of data replication.*
 
 **Usage**: dbsync [options] TableFile SqlDriver Source Destination
