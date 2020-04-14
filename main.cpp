@@ -186,11 +186,14 @@ int GetCrc(QVariantList* vlist, QList<int>*	m_typeCol)	// checksum calculation f
 int TriggersOn (QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, bool bOn)
 {
 	int err = 0;
-	if (m_tabcol->trigg.size() == 0)
+	if (m_tabcol->trigg.size() < 1)	
 		return 0;
 
 	for (int i = 0; i < m_tabcol->trigg.size(); i++) {
-		QString nametrg = m_tabcol->trigg.at(i);
+		QString nametrg = m_tabcol->trigg.at(i).trimmed();
+		if (nametrg == "")	
+			continue;
+
 		QString sql = "";
 		if (SqlDrv == "QOCI") {
 			sql += "alter trigger " + nametrg;			
@@ -223,9 +226,9 @@ int TriggersOn (QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, bool bOn)
 			QString x2 = pdb-> lastError().text().replace("\n", "; ");
 			qCritical() << "Error executing SQL-request: " << x1;
 			qCritical() << "                           : " << x2;
-			AddLog(m_tabcol, x1);
-			AddLog(m_tabcol, x2);
-			AddLog(m_tabcol, sql); 
+			AddLog(m_tabcol, "Err: " + x1);
+			AddLog(m_tabcol, "Err: " + x2);
+			AddLog(m_tabcol, "SQL: " + sql); 
 			pdb->rollback();
 		}
 	}
@@ -331,9 +334,9 @@ int SychroDatab(QSqlDatabase* pdb, QString SqlDrv, int mode, tabcol* m_tabcol, l
 		QString x2 = pdb-> lastError().text().replace("\n" , "; ");
 		qCritical() << "Error executing SQL-request: " << x1;
 		qCritical() << "                           : " << x2;
-		AddLog(m_tabcol, x1);
-		AddLog(m_tabcol, x2);
-		AddLog(m_tabcol, sql); 
+		AddLog(m_tabcol, "Err: " + x1);
+		AddLog(m_tabcol, "Err: " + x2);
+		AddLog(m_tabcol, "SQL: " + sql); 
 		pdb->rollback();	
 	}
 	return err;
@@ -367,8 +370,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		}
 	}
 
-	if (m_tabcol->bIgnTRG == false && 
-		TriggersOn (pdb, SqlDrv, m_tabcol, false) != 0) { 
+	if ((m_tabcol->bIgnTRG == false && m_tabcol->trigg.size() > 0) && TriggersOn (pdb, SqlDrv, m_tabcol, false) != 0) { 
 		QString txt1  = "Trigger is not disabled. Data change disabled";
 		qWarning () << txt1;
 		AddLog(m_tabcol, txt1);
@@ -439,8 +441,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		MissingRows++;
 	}
 
-	if (m_tabcol->bIgnTRG == false && 
-		TriggersOn (pdb, SqlDrv, m_tabcol, true) != 0) {
+	if ((m_tabcol->bIgnTRG == false && m_tabcol->trigg.size() > 0) && TriggersOn (pdb, SqlDrv, m_tabcol, true) != 0) { // ????
 		QString txt1  = "Trigger is not enabled. Check database!";
 		qWarning () << txt1;
 		AddLog(m_tabcol, txt1);
@@ -501,8 +502,8 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
 		QString x1 = query.lastError().text().replace("\n", "; ");
 		qCritical() << "Error executing SQL-request: " << x1;
 
-		AddLog(m_tabcol, x1);
-		AddLog(m_tabcol, sql);
+		AddLog(m_tabcol, "Err: " + x1);
+		AddLog(m_tabcol, "SQL: " + sql);
 		return -31;
 	}
 
@@ -585,7 +586,7 @@ int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
 	QCoreApplication::setApplicationName("Db Synchro");
-	QCoreApplication::setApplicationVersion("1.0");
+	QCoreApplication::setApplicationVersion("1.1");
 
 	QCommandLineParser parser;
 	parser.setApplicationDescription("Data synchronization in tables of two databases");
@@ -650,11 +651,11 @@ int main(int argc, char *argv[])
 	m_tabcol.bIgnDel= parser.isSet(showIgnoreDelOption);
 	m_tabcol.bIgnTRG= parser.isSet(showTriggOption);
 
-	m_tabcol.col	= filetab.at(0).split(",");
-	m_tabcol.colkey = filetab.at(1).split(",");
+	m_tabcol.col	= filetab.at(0).split(",", QString::SkipEmptyParts);
+	m_tabcol.colkey = filetab.at(1).split(",", QString::SkipEmptyParts);
 	m_tabcol.tab	= filetab.at(2);
 	m_tabcol.where  = (filetab.size() > 3) ? filetab.at(3) : "";
-	m_tabcol.trigg  = (filetab.size() > 4) ? filetab.at(4).split(",") : QStringList();
+	m_tabcol.trigg  = (filetab.size() > 4) ? filetab.at(4).split(",", QString::SkipEmptyParts) : QStringList();
 	
 	// get key column indexes
 	for (int t = 0; t < m_tabcol.colkey.size(); t++) {
