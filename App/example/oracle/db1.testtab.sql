@@ -1,4 +1,4 @@
-drop   table TESTTAB
+drop   table TESTTAB;
 create table TESTTAB
 (
   a1 NUMBER(4),
