@@ -1,6 +1,6 @@
 # DbSync
 
-**Data synchronization in tables of two databases**
+**Data synchronization utility in tables of two databases**
 
 *This utility allows you to fix errors in the failure of data replication.*
 
