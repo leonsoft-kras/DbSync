@@ -12,15 +12,16 @@
     -v, --version   Displays version information.
     -l              Write to the log file.
     -x              Show differences in tables only.
-    -u              Ignore rows update.
+    -u              Ignore rows updating.
     -i              ignore rows adding.
     -d              Ignore rows deletion.
-    -t              Disable trigger processing (off/on).
+    -t              Disable trigger execution (off/on).
+    -y              Automatic actions confirmation.
     
 
 **Arguments**:
 
-      TableFile     Path to table data file.
+      TableFile     Path to the table data file.
       SqlDriver     Driver name for connecting to the database: QOCI QPSQL
       Source        Source Db: user/password@alias[:host]
       Destination   Destination Db: user/password@alias[:host]
