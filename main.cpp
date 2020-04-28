@@ -31,6 +31,8 @@
 #include <QTime>
 #include <QDir>
 
+#include <conio.h>
+#include <QTextStream>
 
 typedef struct 
 {
@@ -46,6 +48,7 @@ typedef struct
 	bool		bIgnDel	= false;
 	bool		bIgnUpd	= false;
 	bool		bIgnTRG	= false;
+	bool		bAAC	= false;
 
 	bool		bLog	= false;	
 	QString		logData	= "";
@@ -392,11 +395,30 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 				continue;
 		
 			QVariantList vlist = m_linesS->m_tabdata.at(i);
-			AddLog(m_tabcol, GetRows (&vlist, &m_linesS->m_typeCol));
-			qInfo() << "Diff.Rows: " << strKeyS;
+			QString ScreenStr  = GetRows (&vlist, &m_linesS->m_typeCol);
+			AddLog(m_tabcol, ScreenStr);
 
-			if (m_tabcol->bIgnAll == false && m_tabcol->bIgnUpd == false)
-				err += SychroDatab(pdb, SqlDrv, 2, m_tabcol, m_linesS, m_linesD, i, j); // update
+			if (m_tabcol->bIgnAll == false && m_tabcol->bIgnUpd == false) {
+				
+				bool bY = true;
+				if (m_tabcol->bAAC == false) {
+					qInfo() << "Diff.Rows: " << ScreenStr;
+					printf ("Replace data (y/n) ?"); 
+					int ass = getch ();
+					if (!(ass == 'Y' || ass == 'y'))	bY = false;
+					printf ("\r                                \r");
+				}
+				else {
+					qInfo() << "Diff.Rows: " << strKeyS;
+				}
+
+				if (bY == true)
+					err += SychroDatab(pdb, SqlDrv, 2, m_tabcol, m_linesS, m_linesD, i, j); // update
+			}
+			else {
+				qInfo() << "Diff.Rows: " << strKeyS;
+			}
+
 
 			m_linesS->m_crcline.removeAt(i);	m_linesS->m_tabdata.removeAt(i);
 			m_linesD->m_crcline.removeAt(j);	m_linesD->m_tabdata.removeAt(j);
@@ -413,12 +435,29 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 	for (int j = 0; j < m_linesD->m_crcline.size(); j++)	{
 
 		QVariantList vlist = m_linesD->m_tabdata.at(j);
-		AddLog(m_tabcol, GetRows (&vlist, &m_linesD->m_typeCol));
+		QString ScreenStr = GetRows (&vlist, &m_linesD->m_typeCol);
+		AddLog(m_tabcol, ScreenStr);
 		QString strKeyD = GetKeyStr(m_linesD->m_typeCol, m_linesD->m_nameCol, m_linesD->m_tabdata.at(j), m_tabcol->poskey);  // destination
-		qInfo() << "Unwd.Rows: " << strKeyD;
 
-		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnDel == false)
-			err += SychroDatab(pdb, SqlDrv, 0, m_tabcol, m_linesS, m_linesD, 0, j);	// delete
+		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnDel == false) {
+			bool bY = true;
+			if (m_tabcol->bAAC == false) {
+				qInfo() << "Unwd.Rows: " << ScreenStr;
+				printf ("Delete data (y/n) ?");
+				int ass = getch ();
+				if (!(ass == 'Y' || ass == 'y'))	bY = false;
+				printf ("\r                                \r");
+			}
+			else {
+				qInfo() << "Unwd.Rows: " << strKeyD;
+			}
+
+			if (bY == true)
+				err += SychroDatab(pdb, SqlDrv, 0, m_tabcol, m_linesS, m_linesD, 0, j);	// delete
+		}
+		else {
+			qInfo() << "Unwd.Rows: " << strKeyD;
+		}
 
 		UnwantedRows++;
 	}
@@ -431,15 +470,34 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 	for (int i = 0; i < m_linesS->m_crcline.size(); i++)	{
 
 		QVariantList vlist = m_linesS->m_tabdata.at(i);
-		AddLog(m_tabcol, GetRows (&vlist, &m_linesS->m_typeCol));
+		QString ScreenStr  = GetRows (&vlist, &m_linesS->m_typeCol);
+		AddLog(m_tabcol, ScreenStr);
 		QString strKeyS= GetKeyStr(	m_linesS->m_typeCol, m_linesS->m_nameCol, m_linesS->m_tabdata.at(i), m_tabcol->poskey);  // source
-		qInfo() << "Miss.Rows: " << strKeyS;
 
-		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnIns == false)
-			err += SychroDatab(pdb, SqlDrv, 1, m_tabcol, m_linesS, m_linesD, i, 0);	// insert
+		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnIns == false) {
+			bool bY = true;
+			if (m_tabcol->bAAC == false) {
+				qInfo() << "Miss.Rows: " << ScreenStr;
+				printf ("Insert data (y/n) ?");
+				int ass = getch ();
+				if (!(ass == 'Y' || ass == 'y'))	bY = false;
+				printf ("\r                                \r");
+			}
+			else {
+				qInfo() << "Miss.Rows: " << strKeyS;
+			}
+
+			if (bY == true)
+				err += SychroDatab(pdb, SqlDrv, 1, m_tabcol, m_linesS, m_linesD, i, 0);	// insert
+		}
+		else {
+			qInfo() << "Miss.Rows: " << strKeyS;
+		}
 
 		MissingRows++;
 	}
+//	printf ("     "); // replace "y/n"
+
 
 	if ((m_tabcol->bIgnTRG == false && m_tabcol->trigg.size() > 0) && TriggersOn (pdb, SqlDrv, m_tabcol, true) != 0) { // ????
 		QString txt1  = "Trigger is not enabled. Check database!";
@@ -586,25 +644,27 @@ int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
 	QCoreApplication::setApplicationName("Db Synchro");
-	QCoreApplication::setApplicationVersion("1.1");
+	QCoreApplication::setApplicationVersion("1.2");
 
 	QCommandLineParser parser;
-	parser.setApplicationDescription("Data synchronization in tables of two databases");
+	parser.setApplicationDescription("Data synchronization utility in tables of two databases.");
 	parser.addHelpOption();
 	parser.addVersionOption();
 
-	parser.addPositionalArgument			("TableFile",		"Path to table data file.");
+	parser.addPositionalArgument			("TableFile",		"Path to the table data file.");
 	parser.addPositionalArgument			("SqlDriver",		"Driver name for connecting to the database");
 	parser.addPositionalArgument			("Source",			"Source Db: user/password@alias[:host]");
 	parser.addPositionalArgument			("Destination",		"Destination Db: user/password@alias[:host]");
 
+	QCommandLineOption showAutoActionConf	("y",				"Automatic actions confirmation.");
 	QCommandLineOption showIgnoreAllOption	("x",				"Show differences in tables only.");
-	QCommandLineOption showIgnoreUpdOption	("u",				"Ignore rows update.");
+	QCommandLineOption showIgnoreUpdOption	("u",				"Ignore rows updating.");
 	QCommandLineOption showIgnoreInsOption	("i",				"ignore rows adding.");
 	QCommandLineOption showIgnoreDelOption	("d",				"Ignore rows deletion.");
 	QCommandLineOption showLogOption        ("l",				"Write to the log file.");
-	QCommandLineOption showTriggOption      ("t",				"Disable trigger processing (off/on).");
+	QCommandLineOption showTriggOption      ("t",				"Disable trigger execution (off/on).");
 
+	parser.addOption  (showAutoActionConf);
 	parser.addOption  (showLogOption);
 	parser.addOption  (showIgnoreAllOption);
 	parser.addOption  (showIgnoreUpdOption);
@@ -650,6 +710,7 @@ int main(int argc, char *argv[])
 	m_tabcol.bIgnIns= parser.isSet(showIgnoreInsOption);
 	m_tabcol.bIgnDel= parser.isSet(showIgnoreDelOption);
 	m_tabcol.bIgnTRG= parser.isSet(showTriggOption);
+	m_tabcol.bAAC	= parser.isSet(showAutoActionConf);
 
 	m_tabcol.col	= filetab.at(0).split(",", QString::SkipEmptyParts);
 	m_tabcol.colkey = filetab.at(1).split(",", QString::SkipEmptyParts);
