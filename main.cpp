@@ -590,7 +590,7 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
 
 
 //-------------------------------------------------------------------------------------------------
-QSqlDatabase* GetDb(QString db, QString drv, char* name)
+QSqlDatabase* GetDb(QString db, QString drv, const char* name)
 {
 	QSqlDatabase  xx = QSqlDatabase::addDatabase(drv, QString("DbSync.%1").arg(QTime::currentTime().msecsSinceStartOfDay()));
 	QStringList list = db.split(QRegExp("[/@:]"), QString::SkipEmptyParts);
