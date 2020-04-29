@@ -20,11 +20,10 @@
     
 
 **Arguments**:
-
-      TableFile     Path to the table data file.
-      SqlDriver     Driver name for connecting to the database: QOCI QPSQL
-      Source        Source Db: user/password@alias[:host]
-      Destination   Destination Db: user/password@alias[:host]
+    TableFile     Path to the table data file.
+    SqlDriver     Driver name for connecting to the database: QOCI QPSQL
+    Source        Source Db: user/password@alias[:host]
+    Destination   Destination Db: user/password@alias[:host]
     
 **TableFile**:
 - table columns
@@ -39,8 +38,18 @@ note:
 - triggers - disabling replication triggers during data synchronization.
   
 **Program start:**
-1. determine the existence and type of differences in the tables: "dbsync -l -x ..."
-2. synchronize data in tables: "dbsync -l ..."
-3. check the log file
+1. Determine the existence and type of differences in the tables: "dbsync -l -x ..."
+2. Check the log file
+3. Synchronize data in tables: "dbsync -l ..."
+4. Check the log file
 
 The Examples folder contains examples of tables and calls to the program.
+
+**Project building:**
+1. qmake -makefile
+2. make (gcc/mingw) or nmake (msvs)
+
+You need:
+- Qt 5 (v.5.11 and higher)
+- Compiler: MinGW, GCC, Microsoft Visual C++
+- libraries for working with the database: oracle, postgresql
