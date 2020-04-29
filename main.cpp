@@ -106,7 +106,7 @@ QString SetVariantStr(int type, QVariant var, int pos)	// column data to form a 
 		default:
 			// error !!!
 			r = var.toString();
-			qWarning () << "Warning: Unsupported column type ("<< type << "). Check program execution";
+			printf ("Warning: Unsupported column type (%d). Check program execution\n", type);
 			break;
 		}
 	}
@@ -138,17 +138,17 @@ QString GetVariantStr(int type, QVariant var)	// column data from the database
 			break;	
 		}
 		case QVariant::Double:
-			r = var.toString();
-			break;
+ 			r = var.toString();
+ 			break;
 		case QVariant::Int:
-			r = var.toString();
-			break;
+ 			r = var.toString();
+ 			break;
 		case QVariant::String:
 			r = var.toString();
 			break;
 		default:					
 			r = var.toString();
-			qWarning () << "Warning: Unsupported column type ("<< type << "). Check program execution";
+			printf ("Warning: Unsupported column type (%d). Check program execution\n", type);
 			break;
 		}
 	}
@@ -194,7 +194,7 @@ int TriggersOn (QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, bool bOn)
 
 	for (int i = 0; i < m_tabcol->trigg.size(); i++) {
 		QString nametrg = m_tabcol->trigg.at(i).trimmed();
-		if (nametrg == "")	
+		if (nametrg.isEmpty())	
 			continue;
 
 		QString sql = "";
@@ -227,8 +227,8 @@ int TriggersOn (QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, bool bOn)
 		if (err != 0) {
 			QString x1 = query.lastError().text().replace("\n", "; ");
 			QString x2 = pdb-> lastError().text().replace("\n", "; ");
-			qCritical() << "Error executing SQL-request: " << x1;
-			qCritical() << "                           : " << x2;
+			printf("Error executing SQL-request: %s\n", qPrintable(x1));
+			printf("                           : %s\n", qPrintable(x2));
 			AddLog(m_tabcol, "Err: " + x1);
 			AddLog(m_tabcol, "Err: " + x2);
 			AddLog(m_tabcol, "SQL: " + sql); 
@@ -335,8 +335,8 @@ int SychroDatab(QSqlDatabase* pdb, QString SqlDrv, int mode, tabcol* m_tabcol, l
 	if (err != 0) {
 		QString x1 = query.lastError().text().replace("\n", "; ");
 		QString x2 = pdb-> lastError().text().replace("\n" , "; ");
-		qCritical() << "Error executing SQL-request: " << x1;
-		qCritical() << "                           : " << x2;
+		printf("Error executing SQL-request: %s\n", qPrintable(x1));
+		printf("                           : %s\n", qPrintable(x2));
 		AddLog(m_tabcol, "Err: " + x1);
 		AddLog(m_tabcol, "Err: " + x2);
 		AddLog(m_tabcol, "SQL: " + sql); 
@@ -348,7 +348,7 @@ int SychroDatab(QSqlDatabase* pdb, QString SqlDrv, int mode, tabcol* m_tabcol, l
 //-------------------------------------------------------------------------------------------------
 int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab* m_linesS, linetab* m_linesD)
 {
-	qInfo () << "\n---------------------------------";
+	printf ("\n---------------------------------\n");
 	int err = 0;
 
 	QString txt = "Columns: ";
@@ -375,7 +375,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 
 	if ((m_tabcol->bIgnTRG == false && m_tabcol->trigg.size() > 0) && TriggersOn (pdb, SqlDrv, m_tabcol, false) != 0) { 
 		QString txt1  = "Trigger is not disabled. Data change disabled";
-		qWarning () << txt1;
+		printf("%s\n", qPrintable(txt1));
 		AddLog(m_tabcol, txt1);
 		m_tabcol->bIgnAll = true;
 	}
@@ -400,23 +400,20 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 
 			if (m_tabcol->bIgnAll == false && m_tabcol->bIgnUpd == false) {
 				
+				printf ("Diff.Rows: %s\n", qPrintable(ScreenStr));
 				bool bY = true;
 				if (m_tabcol->bAAC == false) {
-					qInfo() << "Diff.Rows: " << ScreenStr;
 					printf ("Replace data (y/n) ?"); 
 					int ass = getch ();
 					if (!(ass == 'Y' || ass == 'y'))	bY = false;
 					printf ("\r                                \r");
-				}
-				else {
-					qInfo() << "Diff.Rows: " << strKeyS;
 				}
 
 				if (bY == true)
 					err += SychroDatab(pdb, SqlDrv, 2, m_tabcol, m_linesS, m_linesD, i, j); // update
 			}
 			else {
-				qInfo() << "Diff.Rows: " << strKeyS;
+				printf ("Diff.Rows: %s\n", qPrintable(strKeyS));
 			}
 
 
@@ -437,26 +434,23 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		QVariantList vlist = m_linesD->m_tabdata.at(j);
 		QString ScreenStr = GetRows (&vlist, &m_linesD->m_typeCol);
 		AddLog(m_tabcol, ScreenStr);
-		QString strKeyD = GetKeyStr(m_linesD->m_typeCol, m_linesD->m_nameCol, m_linesD->m_tabdata.at(j), m_tabcol->poskey);  // destination
 
 		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnDel == false) {
+			printf ("Unwd.Rows: %s\n", qPrintable(ScreenStr));
 			bool bY = true;
 			if (m_tabcol->bAAC == false) {
-				qInfo() << "Unwd.Rows: " << ScreenStr;
 				printf ("Delete data (y/n) ?");
 				int ass = getch ();
 				if (!(ass == 'Y' || ass == 'y'))	bY = false;
 				printf ("\r                                \r");
-			}
-			else {
-				qInfo() << "Unwd.Rows: " << strKeyD;
 			}
 
 			if (bY == true)
 				err += SychroDatab(pdb, SqlDrv, 0, m_tabcol, m_linesS, m_linesD, 0, j);	// delete
 		}
 		else {
-			qInfo() << "Unwd.Rows: " << strKeyD;
+			QString strKeyD = GetKeyStr(m_linesD->m_typeCol, m_linesD->m_nameCol, m_linesD->m_tabdata.at(j), m_tabcol->poskey);  // destination
+			printf ("Unwd.Rows: %s\n", qPrintable(strKeyD));
 		}
 
 		UnwantedRows++;
@@ -472,43 +466,39 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		QVariantList vlist = m_linesS->m_tabdata.at(i);
 		QString ScreenStr  = GetRows (&vlist, &m_linesS->m_typeCol);
 		AddLog(m_tabcol, ScreenStr);
-		QString strKeyS= GetKeyStr(	m_linesS->m_typeCol, m_linesS->m_nameCol, m_linesS->m_tabdata.at(i), m_tabcol->poskey);  // source
 
 		if (m_tabcol->bIgnAll == false && m_tabcol->bIgnIns == false) {
+			printf ("Miss.Rows: %s\n", qPrintable(ScreenStr));
 			bool bY = true;
 			if (m_tabcol->bAAC == false) {
-				qInfo() << "Miss.Rows: " << ScreenStr;
 				printf ("Insert data (y/n) ?");
 				int ass = getch ();
 				if (!(ass == 'Y' || ass == 'y'))	bY = false;
 				printf ("\r                                \r");
-			}
-			else {
-				qInfo() << "Miss.Rows: " << strKeyS;
 			}
 
 			if (bY == true)
 				err += SychroDatab(pdb, SqlDrv, 1, m_tabcol, m_linesS, m_linesD, i, 0);	// insert
 		}
 		else {
-			qInfo() << "Miss.Rows: " << strKeyS;
+			QString strKeyS= GetKeyStr(m_linesS->m_typeCol, m_linesS->m_nameCol, m_linesS->m_tabdata.at(i), m_tabcol->poskey);  // source
+			printf ("Miss.Rows: %s\n", qPrintable(strKeyS));
 		}
 
 		MissingRows++;
 	}
-//	printf ("     "); // replace "y/n"
 
 
 	if ((m_tabcol->bIgnTRG == false && m_tabcol->trigg.size() > 0) && TriggersOn (pdb, SqlDrv, m_tabcol, true) != 0) { // ????
 		QString txt1  = "Trigger is not enabled. Check database!";
-		qWarning () << txt1;
+		printf ("%s\n", qPrintable(txt1));
 		AddLog(m_tabcol, txt1);
 		m_tabcol->bIgnAll = true;
 	}
 
 	AddLog(m_tabcol, QString("-----------------------------------------"));
 	if (DifferentRows != 0 || UnwantedRows != 0 || MissingRows != 0)
-		qInfo () << "\n---------------------------------";
+		printf ("\n---------------------------------\n");
 
 	AddLog(m_tabcol, QString("Total:"));
 	AddLog(m_tabcol, QString("   Identical rows: %1").arg(DuplicateRows));	qInfo () << "Identical rows: " << DuplicateRows;
@@ -518,7 +508,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 
 	if (err != 0) {
 		QString tt = "Warning: there were errors when changing the data in the table.";
-		qWarning() << "\n" << tt;
+		printf ("\n%s\n)",qPrintable(tt));
 		AddLog(m_tabcol, tt);
 	}
 	return err;
@@ -528,7 +518,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 //-------------------------------------------------------------------------------------------------
 int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m_lines)
 {
-	qInfo() << "Read data :  start";
+	printf ("Read data : start\n");
 
 	QString sql = "select ";
 	for (int i = 0; i < m_tabcol->col.size(); i++) {
@@ -540,7 +530,7 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
  	else
  	if (SqlDrv == "QPSQL")	sql += "ctid";
 	else {
-		qCritical() << "Error in determining the SQL-driver:" << SqlDrv;
+		printf ("Error in determining the SQL-driver: %s\n", qPrintable (SqlDrv));
 		return -30;	// w/o rowid !!!
 	}
 
@@ -558,7 +548,7 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
 	bool b = query.exec(sql);
 	if (b == false) {
 		QString x1 = query.lastError().text().replace("\n", "; ");
-		qCritical() << "Error executing SQL-request: " << x1;
+		printf ("Error executing SQL-request: %s\n", qPrintable(x1));
 
 		AddLog(m_tabcol, "Err: " + x1);
 		AddLog(m_tabcol, "SQL: " + sql);
@@ -574,8 +564,6 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
 		QString    nname	= oField.name();
 		QVariant   vartype	= oField.type();
 		int			precis	= oField.precision();
-//		int			plen	= oField.length ();
-//		int			type1   = oField.typeID();
 		int			typeCol =(int)vartype.type();
 
 		if (typeCol == (int)QVariant::Double && precis == 0) {
@@ -595,20 +583,19 @@ int GetDataTable(QSqlDatabase* pdb, QString SqlDrv, tabcol*	m_tabcol, linetab* m
 		m_lines->m_tabdata.append( mvlist );
 		m_lines->m_crcline.append( GetCrc(&mvlist, &m_lines->m_typeCol) );
 	} 
-	qInfo() << "Read data :  finish";
+	printf ("Read data : finish\n\n");
 	return 0;
 }
 
 
 
 //-------------------------------------------------------------------------------------------------
-QSqlDatabase* GetDb(QString db, QString drv)
+QSqlDatabase* GetDb(QString db, QString drv, char* name)
 {
-	qInfo() << "Connect Db: " << db;
 	QSqlDatabase  xx = QSqlDatabase::addDatabase(drv, QString("DbSync.%1").arg(QTime::currentTime().msecsSinceStartOfDay()));
 	QStringList list = db.split(QRegExp("[/@:]"), QString::SkipEmptyParts);
 	if (list.size() < 3) { 
-		qCritical()<< "Error in database connection settings: " << db;	
+		printf ("Error in %s Db connection settings\n", name);	
 		return nullptr;	
 	}
 
@@ -625,12 +612,13 @@ QSqlDatabase* GetDb(QString db, QString drv)
 		// nothing
 	}
 	else {
-		qCritical() << "Unsupported SQL-driver type. Program revision required";
+		printf ("Unsupported SQL-driver type. Program revision required\n");
 		return nullptr;
 	}
 
+	printf ("Connect Db: %s\n", name);
 	if (!xx.open()) {
-		qCritical()<< "Error connecting to database: " << xx.lastError().text().replace("\n","; ");	
+		printf ("Error connecting to database: %s\n", qPrintable( xx.lastError().text().replace("\n","; ") ));	
 		return nullptr;	
 	}
 
@@ -695,12 +683,12 @@ int main(int argc, char *argv[])
 		while (!file.atEnd())	filetab.append(file.readLine().trimmed());
 	}
 	if (err != 0 || filetab.size() <= 3) {
-		qInfo () << "Error in 'TableFile': \nLine (#):";
-		qInfo () << "1: table columns";
-		qInfo () << "2: key table columns";
-		qInfo () << "3: name table";
-		qInfo () << "4: condition (where)";
-		qInfo () << "5: triggers";
+		printf ("Error in 'TableFile' (#line. description): \n");
+		printf ("1: table columns\n");
+		printf ("2: key table columns\n");
+		printf ("3: name table\n");
+		printf ("4: condition (where)\n");
+		printf ("5: triggers\n");
 		return -2;
 	}
 
@@ -727,32 +715,45 @@ int main(int argc, char *argv[])
 	}
 
 	// print
-	qInfo () << "SQL Driver: " << dbDrv;
-	qInfo () << "Source Db : " << args.at(2);
-	qInfo () << "Destin Db : " << args.at(3);
-	qInfo () << "TableFile : " << targetFile;
-	qInfo () << "  column  : " << filetab.at(0);
-	qInfo () << "  key col.: " << filetab.at(1);
-	qInfo () << "  table   : " << filetab.at(2);
+	QString sdb_alias= "unknown";
+	QStringList slist= args.at(2).split(QRegExp("[/@:]"), QString::SkipEmptyParts);
+	if (slist.size() >= 3) {
+		sdb_alias = slist.at(0) + "/***@" + slist.at(2);
+		if (slist.size() >= 4) sdb_alias += ":" + slist.at(3);		
+	}
+	QString ddb_alias= "unknown";
+	QStringList dlist= args.at(3).split(QRegExp("[/@:]"), QString::SkipEmptyParts);
+	if (dlist.size() >= 3) {
+		ddb_alias = dlist.at(0) + "/***@" + dlist.at(2);
+		if (dlist.size() >= 4) ddb_alias += ":" + dlist.at(3);		
+	}
+
+	printf ("SQL Driver: %s\n", qPrintable(dbDrv));
+	printf ("Source Db : %s\n", qPrintable(sdb_alias));
+	printf ("Destin Db : %s\n", qPrintable(ddb_alias));
+	printf ("TableFile : %s\n", qPrintable(targetFile));
+	printf ("  column  : %s\n", qPrintable(filetab.at(0)));
+	printf ("  key col.: %s\n", qPrintable(filetab.at(1)));
+	printf ("  table   : %s\n", qPrintable(filetab.at(2)));
 	if (filetab.size() > 3)
-	qInfo () << "  where   : " << filetab.at(3);
+		printf ("  where   : %s\n", qPrintable(filetab.at(3)));
 	if (filetab.size() > 4)
-	qInfo () << "  triggers: " << filetab.at(4);
-	qInfo () << "  ";
+		printf ("  triggers: %s\n", qPrintable(filetab.at(4)));
+	printf ("  \n");
 
 	QSqlDatabase *p1 = nullptr, *p2 = nullptr;
 	err = 0; linetab linesSrc, linesDst;
 	for (;;)
 	{
 		// get Source -------
-		p1 = GetDb(args.at(2), dbDrv);
+		p1 = GetDb(args.at(2), dbDrv, "source");
 		if (p1 == nullptr) { err = -10; break; }
 
 		if (GetDataTable(p1, dbDrv, &m_tabcol, &linesSrc) != 0) { err = -11; break; }
 		p1->close();
 
 		// get Destin -------
-		p2 = GetDb(args.at(3), dbDrv);
+		p2 = GetDb(args.at(3), dbDrv, "destination");
 		if (p2 == nullptr) { err = -12; break; }
 
 		if (GetDataTable(p2, dbDrv, &m_tabcol, &linesDst) != 0) { err = -13; break;	}
