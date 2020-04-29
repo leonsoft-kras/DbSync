@@ -20,11 +20,13 @@
     
 
 **Arguments**:
+
       TableFile     Path to the table data file.
       SqlDriver     Driver name for connecting to the database: QOCI QPSQL
       Source        Source Db: user/password@alias[:host]
       Destination   Destination Db: user/password@alias[:host]
     
+	
 **TableFile**:
 - table columns
 - key table columns
