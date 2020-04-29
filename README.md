@@ -20,10 +20,10 @@
     
 
 **Arguments**:
-    TableFile     Path to the table data file.
-    SqlDriver     Driver name for connecting to the database: QOCI QPSQL
-    Source        Source Db: user/password@alias[:host]
-    Destination   Destination Db: user/password@alias[:host]
+      TableFile     Path to the table data file.
+      SqlDriver     Driver name for connecting to the database: QOCI QPSQL
+      Source        Source Db: user/password@alias[:host]
+      Destination   Destination Db: user/password@alias[:host]
     
 **TableFile**:
 - table columns
@@ -51,5 +51,5 @@ The Examples folder contains examples of tables and calls to the program.
 
 You need:
 - Qt 5 (v.5.11 and higher)
-- Compiler: MinGW, GCC, Microsoft Visual C++
+- compiler: MinGW, GCC, Microsoft Visual C++
 - libraries for working with the database: oracle, postgresql
