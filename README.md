@@ -4,29 +4,29 @@
 
 *This utility allows you to fix errors in the failure of data replication.*
 
-**Usage**: dbsync [options] TableFile SqlDriver Source Destination
+**Usage**: dbsync [options] TableFile DrvSrc Source DrvDst Destination
 
 **Options**:
 
-    -?, -h, --help  Displays this help.
-    -v, --version   Displays version information.
-    -l              Write to the log file.
-    -x              Show differences in tables only.
-    -u              Ignore rows updating.
-    -i              ignore rows adding.
-    -d              Ignore rows deletion.
-    -t              Disable trigger execution (off/on).
-    -y              Automatic actions confirmation.
-    
+    -?, -h, --help   Displays this help.
+    -v, --version    Displays version information.
+    -l               Write down to the log file.
+    -x               Show differences in tables only.
+    -u               Ignore rows updating.
+    -i               Ignore rows adding.
+    -d               Ignore rows deletion.
+    -t               Disable trigger execution (off/on).
+    -y               Confirm the automatic actions.
+    -m <connections> The number of concurrent database connections (1-20).
+    -n <limit>       Symbols quantity limit in the log file line (50-999).
 
 **Arguments**:
 
-      TableFile     Path to the table data file.
-      SqlDriver     Driver name for connecting to the database: QOCI QPSQL
-      Source        Source Db: user/password@alias[:host]
-      Destination   Destination Db: user/password@alias[:host]
-    
-	
+      TableFile       Path to the table data file.
+      DrvSrc,DrvDst   Driver name for connecting to the (source,destination) database: QOCI QPSQL
+      Source          Db: user/password@alias or user/password@db[:addr*port]
+      Destination     Db: user/password@alias or user/password@db[:addr*port]
+
 **TableFile**:
 - table columns
 - key table columns
@@ -36,16 +36,19 @@
 
 note:
 - key table columns - columns to define unique rows;
-- where - processing only part of the data in the table;
-- triggers - disabling replication triggers during data synchronization.
+- where - process only part of the data in the table;
+- triggers - disabling (replication) triggers during data synchronization.
   
-**Program start:**
-1. Determine the existence and type of differences in the tables: "dbsync -l -x ..."
+**How to Use:**
+
+DbSync is a command line application. You can use it like the following:
+
+1. Detect the differences in the tables: "dbsync -l -x ..."
 2. Check the log file
 3. Synchronize data in tables: "dbsync -l ..."
-4. Check the log file
+4. Check the log file and the Db
 
-The Examples folder contains examples of tables and calls to the program.
+The Examples folder contains examples of tables and the program invocation.
 
 **Project building:**
 1. qmake -makefile
@@ -54,4 +57,4 @@ The Examples folder contains examples of tables and calls to the program.
 You need:
 - Qt 5 (v.5.11 and higher)
 - compiler: MinGW, GCC, Microsoft Visual C++
-- libraries for working with the database: oracle, postgresql
+- libraries for the database handling: oracle, postgresql
