@@ -7,21 +7,20 @@
 **Usage**: dbsync [options] TableFile DrvSrc Source DrvDst Destination
 
 **Options**:
-
     -?, -h, --help   Displays this help.
     -v, --version    Displays version information.
+    -y               Confirm the automatic actions.
     -l               Write down to the log file.
     -x               Show differences in tables only.
     -u               Ignore rows updating.
     -i               Ignore rows adding.
     -d               Ignore rows deletion.
     -t               Disable trigger execution (off/on).
-    -y               Confirm the automatic actions.
     -m <connections> The number of concurrent database connections (1-20).
     -n <limit>       Symbols quantity limit in the log file line (50-999).
+	-b               Writing additional debugging information.
 
 **Arguments**:
-
       TableFile       Path to the table data file.
       DrvSrc,DrvDst   Driver name for connecting to the (source,destination) database: QOCI QPSQL
       Source          Db: user/password@alias or user/password@db[:addr*port]
@@ -40,7 +39,6 @@ note:
 - triggers - disabling (replication) triggers during data synchronization.
   
 **How to Use:**
-
 DbSync is a command line application. You can use it like the following:
 
 1. Detect the differences in the tables: "dbsync -l -x ..."
@@ -58,3 +56,17 @@ You need:
 - Qt 5 (v.5.11 and higher)
 - compiler: MinGW, GCC, Microsoft Visual C++
 - libraries for the database handling: oracle, postgresql
+
+**Folder dbinstance:**
+SubFolder "PSQL":
+- iconv.dll
+- libeay32.dll
+- libiconv.dll
+- libintl.dll
+- libpq.dll
+- libxml2.dll
+- libxslt.dll
+- ssleay32.dll
+
+SubFolder "ORACLE":
+- Files from Oracle instant client 
