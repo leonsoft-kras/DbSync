@@ -1,6 +1,6 @@
 //
 #define FVERSION_MAJOR              2
-#define FVERSION_MINOR              3
+#define FVERSION_MINOR              5
 
 #define FVERSION_MINOR2             0
 

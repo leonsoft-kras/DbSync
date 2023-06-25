@@ -19,15 +19,16 @@
  */
 
 #ifdef CRASH_ON
-	#include "crashrpt.h"
-	#include <windows.h>
-	#pragma comment( lib, "crashrpt.lib" )
+#include "crashrpt.h"
+#include <windows.h>
+#pragma comment( lib, "crashrpt.lib" )
 
-	BOOL WINAPI CrashCallback(LPVOID /*lpvState*/)
-	{  	
-		crAddScreenshot(CR_AS_VIRTUAL_SCREEN);
-		return TRUE;
-	}
+	// Зададим Callback-функцию, которая будет вызвана при сбое
+BOOL WINAPI CrashCallback(LPVOID /*lpvState*/)
+{  	
+	crAddScreenshot(CR_AS_VIRTUAL_SCREEN);
+	return TRUE;
+}
 #endif
 
 
@@ -45,9 +46,12 @@
 #include <QDir>
 #include <QThread>
 #include <QCryptographicHash>
-
-#include <conio.h>
+#include <QSettings>
+#include <QTextCodec>
+#include <locale.h>
 #include <QTextStream>
+
+#include "lin.h"
 #include "vers.h"
 
 
@@ -100,7 +104,7 @@ void AddLog (tabcol* ptabcol, QString txt, bool CheckMax=true)
 }
 
 //-------------------------------------------------------------------------------------------------
-QString SetVariantStr(int type, const QVariant& var, int pos)	
+QString SetVariantStr(int type, const QVariant& var, int pos)	// column data to form a query
 {
 	QString r = "";
 	if (var.isNull()) {
@@ -131,7 +135,7 @@ QString SetVariantStr(int type, const QVariant& var, int pos)
 		}
 		case QVariant::Time: {
 			QTime t = var.toTime();
-			r = QString("to_timestamp('%1:%2:%3.%4', 'hh24:mi:ss.ff3')"). 
+			r = QString("to_timestamp('%1:%2:%3.%4', 'hh24:mi:ss.ff3')"). // bag fix
 				arg(t.hour(), 2, 10, QChar('0')).arg(t.minute(), 2, 10, QChar('0')).arg(t.second(), 2, 10, QChar('0')).
 				arg(t.msec(), 3, 10, QChar('0'));
 			break;
@@ -146,7 +150,7 @@ QString SetVariantStr(int type, const QVariant& var, int pos)
 			break;
 
 		case QVariant::String:
-			r = "'" + var.toString().replace("'","''") + "'";	
+			r = "'" + var.toString().replace("'","''") + "'";	// 2022 - fix bag if appostrof
 			break;
 		case QVariant::ByteArray: {
 			r = QString(":id%1").arg(pos);
@@ -162,7 +166,7 @@ QString SetVariantStr(int type, const QVariant& var, int pos)
 }
 
 //-------------------------------------------------------------------------------------------------
-inline QString GetVariantStr(int type, const QVariant& var, bool& bUnsupport)	
+inline QString GetVariantStr(int type, const QVariant& var, bool& bUnsupport)	// column data from the database
 {
 	QString r = "";
 	if (var.isNull()) {
@@ -224,8 +228,8 @@ inline QString GetVariantStr(int type, const QVariant& var, bool& bUnsupport)
 
 //-------------------------------------------------------------------------------------------------
 inline QString GetKeyStr(	QList<int>  m_type, 
-							QStringList	m_name,
-							QVariantList vl, QList<int> keys) 
+					QStringList	m_name,
+					QVariantList vl, QList<int> keys) // forming a row of key columns
 {
 	bool bUnsupport = false;
 	QString r = "";
@@ -240,7 +244,7 @@ inline QString GetKeyStr(	QList<int>  m_type,
 inline QString GetRows (QVariantList* vlist, QList<int>* m_typeCol, bool& bUnsupport, int& ColUnsupp)
 {
 	QString xx = "";
-	for (int i = 0; i < vlist->size() - 1; i++) {	
+	for (int i = 0; i < vlist->size() - 1; i++) {	// exclude rowid (last rows!)
 		xx += GetVariantStr(m_typeCol->at(i), vlist->at(i), bUnsupport) + "; ";
 		if (bUnsupport == true && ColUnsupp == -1)
 			ColUnsupp = i+1;
@@ -249,12 +253,12 @@ inline QString GetRows (QVariantList* vlist, QList<int>* m_typeCol, bool& bUnsup
 }
 
 //-------------------------------------------------------------------------------------------------
-inline QString GetCrc(QVariantList* vlist, QList<int>*	m_typeCol, bool& bUnsupport, int& ColUnsupp)	
+inline QString GetCrc(QVariantList* vlist, QList<int>*	m_typeCol, bool& bUnsupport, int& ColUnsupp)	// checksum calculation for all table columns
 {
 	QString rowdata= GetRows (vlist, m_typeCol, bUnsupport, ColUnsupp);
 	QByteArray bb  = rowdata.toUtf8();
-	QByteArray sha = QCryptographicHash::hash(bb, QCryptographicHash::Sha3_512);	
-	return QString::fromLocal8Bit(sha.toHex ());	
+	QByteArray sha = QCryptographicHash::hash(bb, QCryptographicHash::Sha3_512);	// fix - best hash func!
+	return QString::fromLocal8Bit(sha.toHex ());	// -char-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -278,8 +282,8 @@ int TriggersOn (QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, bool bOn)
 		else 
 		if (SqlDrv == "QPSQL") {
 			sql += "ALTER TABLE " + m_tabcol->tab.toLower();
-			if (bOn == true)	sql += " enable ";
-			else				sql += " disable ";
+			if (bOn == true)	sql += " ENABLE ";
+			else				sql += " DISABLE ";
 			sql += "TRIGGER " + nametrg.toLower();
 		} 
 		else {
@@ -458,9 +462,8 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 	// for debug
 	if (m_tabcol->bDebug == true)  AddLog(m_tabcol, "\n", false);
 
-	QString txt = "Columns: ";
-	for (int b=0; b < m_tabcol->col.size(); b++)	txt += m_tabcol->col.at(b) + ";";	
-	AddLog(m_tabcol, txt, false);
+	AddLog(m_tabcol, "Table: " + m_tabcol->tab, false);
+	QString txt = "Columns: "; for (int b=0; b < m_tabcol->col.size(); b++)	txt += m_tabcol->col.at(b) + ";"; AddLog(m_tabcol, txt, false);
 
 	// search & ignore duplicate rows
 	int DuplicateRows = 0;
@@ -505,6 +508,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 	bool bUnsupp = false;
 	int  indUnsC = -1;
 
+
 	// search & update different rows
 	int DifferentRows = 0;
 	for (int i = 0; i < m_linesS->m_crcline.size() && m_linesD->m_crcline.size() > 0; i++)	{
@@ -513,7 +517,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		for (int j = 0; j < m_linesD->m_crcline.size(); j++)	{
 			QString strKeyD = GetKeyStr(m_linesD->m_typeCol, m_linesD->m_nameCol, m_linesD->m_tabdata.at(j), m_tabcol->poskey);  // destination
 
-			if (strKeyS != strKeyD)	
+			if (strKeyS != strKeyD)	// !same row, but... (2022 this is Unnecessary or Missing - key1 != key2)
 				continue;
 		
 			// this is diff row (key1==key2)
@@ -595,7 +599,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 			printf ("Unnecessary: %s\n", qPrintable(LimitScreen(strKeyD)));
 		}
 
-		UnnecessRows += nChangeRow;	
+		UnnecessRows += nChangeRow;	// 2022 - 
 	}
 
 	AddLog(m_tabcol, QString("-----------------------------------------"));
@@ -634,7 +638,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 		MissingRows += nChangeRow;
 	}
 
-	if (bChngeTrg == true && 
+	if (bChngeTrg == true && // 2022 only if recovery db
 		m_tabcol->bIgnTRG == false &&
 		m_tabcol->trigg.size() > 0) 
 	{
@@ -648,9 +652,17 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 	}
 
 	AddLog(m_tabcol, QString("-----------------------------------------"));
-	printf ("\n------------------------------------------------------------------\n");	
+	printf ("\n------------------------------------------------------------------\n");	// 2022 - always print
 
-	AddLog(m_tabcol, QString("Total:"));  printf ("Total:\n"); 
+	if (bChngeTrg == true) {
+		AddLog(m_tabcol, QString("Total differences after synchronization:"));
+		printf ("Total differences after synchronization:\n"); 
+	}
+	else {
+		AddLog(m_tabcol, QString("Total:"));
+		printf ("Total:\n"); 
+	}
+
 	AddLog(m_tabcol, QString("   Identical   rows (Src==Dst): %1").arg(DuplicateRows));	qInfo () << "- Identical   rows (Src==Dst): " << DuplicateRows;
 	AddLog(m_tabcol, QString("   Different   rows (Src<>Dst): %1").arg(DifferentRows));	qInfo () << "- Different   rows (Src<>Dst): " << DifferentRows;
 	AddLog(m_tabcol, QString("   Unnecessary rows (Only Dst): %1").arg(UnnecessRows ));	qInfo () << "- Unnecessary rows (Only Dst): " << UnnecessRows;
@@ -658,7 +670,7 @@ int TableComparison(QSqlDatabase* pdb, QString SqlDrv, tabcol* m_tabcol, linetab
 
 	if (err != 0) {
 		QString tt = "Warning: there were errors when changing the data in the table.";
-		printf ("\n%s\n",qPrintable(tt));	
+		printf ("\n%s\n",qPrintable(tt));	// 2022 fix )
 		AddLog(m_tabcol, tt);
 	}
 	return err;
@@ -759,6 +771,7 @@ int GetDataTable(QList<QSqlDatabase*> m_db, QString SqlDrv, tabcol*	m_tabcol, li
 	QString nameRID	  = "DbSyncExtentKeyId";	// Aliases for special database fields. 
 	QString nameRNM	  = "DbSyncExtentRowNum";	// Must be unique, do not match table fields
 
+	// get rows count
 	QString cnttest = "select count(*) from " + m_tabcol->tab;
 	m_tabcol->where = m_tabcol->where.trimmed();
 	if (m_tabcol->where.isEmpty() == false) {
@@ -766,79 +779,113 @@ int GetDataTable(QList<QSqlDatabase*> m_db, QString SqlDrv, tabcol*	m_tabcol, li
 		cnttest += m_tabcol->where;
 	}	
 
+	// for debug
 	if (m_tabcol->bDebug == true) AddLog(m_tabcol, "  " + cnttest, false);
 
-	QSqlQuery query0(*pdb);
+	QSqlQuery query0(*pdb);						// execute sql
 	bool b = query0.exec(cnttest);
 	if (b == false) 
 		return SaveErr (&query0, cnttest, m_tabcol, -33);
 		
 	int cnt_rows = 0;
-	if (query0.next())		
+	if (query0.next())							// read records
 		cnt_rows = query0.value(0).toInt();
 
 	printf ("Rows count: %d\n", cnt_rows);
 	printf ("Read  data: start\n");
 
 	//-----------------------------
-	// multi processing - prepare requests for several threads
-	QString sql1= "";
-	QString sql2= "";
-	QString sqlw= "";
-	for (int i = 0; i < m_tabcol->col.size(); i++) {
-		sql1 +=        m_tabcol->col.at(i).trimmed() + ",";
-		sql2 += "t." + m_tabcol->col.at(i).trimmed() + ",";
-	}
-	sql1 += nameRID;
+	QString sql0;
+	int n_beg = 0, n_end = 0, n_step = 1;
+	if (maxConnect == 1) {
+		// old postgresql
+		sql0= "select ";
+		for (int i = 0; i < m_tabcol->col.size(); i++) {
+			sql0 +=        m_tabcol->col.at(i).trimmed() + ",";
+		}
 
-	if (SqlDrv == "QOCI") {
-		sql2 += "t.rowid " + nameRID + ", ";	// to access the row to update
-		sql2 += "rownum " + nameRNM + " ";		// to fetch a specific piece of data (part of select)
-		sqlw  = "t.rowid";						// data acquisition identity
-	}
- 	else
-	if (SqlDrv == "QPSQL") {
-		sql2 += "ctid " + nameRID + ", ";
-		sql2 += "row_number() over() as " + nameRNM + " ";
-		sqlw  = "ctid";
+		if (SqlDrv == "QOCI") {
+			sql0 += "t.rowid " + nameRID ;	// to access the row to update
+		} else
+		if (SqlDrv == "QPSQL") {
+			sql0 += "ctid as " + nameRID;
+		} else {
+			printf ("SQL-driver determination error: %s\n", qPrintable (SqlDrv));
+			return -30;	// w/o rowid !!!
+		}
+		sql0 += " from " + m_tabcol->tab;
+
+		if (m_tabcol->where.isEmpty() == false) {
+			sql0 += " where ";
+			sql0 += m_tabcol->where;
+		}
+
+		n_step= cnt_rows;
 	}
 	else {
-		printf ("SQL-driver determination error: %s\n", qPrintable (SqlDrv));
-		return -30;	// w/o rowid !!!
-	}
+		// 
+		// multi processing - prepare requests for several threads
+		QString sql1= "";
+		QString sql2= "";
+		QString sqlw= "";
+		for (int i = 0; i < m_tabcol->col.size(); i++) {
+			sql1 +=        m_tabcol->col.at(i).trimmed() + ",";
+			sql2 += "t." + m_tabcol->col.at(i).trimmed() + ",";
+		}
+		sql1 += nameRID;
 
-	QString sql0= "select ";
-	sql0 += sql1;
-	sql0 += " from (select ";
-	sql0 += sql2;
-	sql0 += " from " + m_tabcol->tab;
-	sql0 += " t ";
-	if (m_tabcol->where.isEmpty() == false) {
-		sql0 += " where ";
-		sql0 += m_tabcol->where;
-	}
-	sql0 += " order by ";
-	sql0 += sqlw;
-	sql0 += ") ";
+		if (SqlDrv == "QOCI") {
+			sql2 += "t.rowid " + nameRID + ", ";	// to access the row to update
+			sql2 += "rownum " + nameRNM + " ";		// to fetch a specific piece of data (part of select)
+			sqlw  = "t.rowid";						// data acquisition identity
+		} else
+		if (SqlDrv == "QPSQL") {
+			sql2 += "ctid as " + nameRID + ", ";
+			sql2 += "row_number() over() as " + nameRNM + " ";
+			sqlw  = "ctid";
+		} else {
+			printf ("SQL-driver determination error: %s\n", qPrintable (SqlDrv));
+			return -30;	// w/o rowid !!!
+		}
 
-	if (SqlDrv == "QPSQL") {	
-		sql0 += "as DbSyncCursorTable ";
-	}
+		sql0  = "select ";
+		sql0 += sql1;
+		sql0 += " from (select ";
+		sql0 += sql2;
+		sql0 += " from " + m_tabcol->tab;
+		sql0 += " t ";
+		if (m_tabcol->where.isEmpty() == false) {
+			sql0 += " where ";
+			sql0 += m_tabcol->where;
+		}
+		sql0 += " order by ";
+		sql0 += sqlw;
+		sql0 += ") ";
 
-	int n_beg = 0, n_end = 0, n_step = 10 + cnt_rows / maxConnect;
-	n_step = (n_step / 10) * 10;
+		if (SqlDrv == "QPSQL") {	// fix Postgresql - alias for:  FROM (SELECT ...) [AS] foo
+			sql0 += "as DbSyncCursorTable ";
+		}
 
-	if (cnt_rows / maxConnect <= 10) {
-		maxConnect = 1;
-		n_step     = 10 + cnt_rows;
+		n_beg = 0; n_end = 0; n_step = 10 + cnt_rows / maxConnect;
+		n_step = (n_step / 10) * 10;
+
+		if (cnt_rows / maxConnect <= 10) {				// little data = 1 thread
+			maxConnect = 1;
+			n_step     = 10 + cnt_rows;
+		}
 	}
 
 	CMyDbThread pThr[22];							// max 10 thread (protected)
 	for (int n = 0; n < maxConnect; n++) {			// threads get data in parts from the all rows: 1..10, 11..20, 21..30 and etc.
-		n_end		= n_beg + n_step;				// so the database client loads the entire network channel
+
 		QString ssql= sql0;
-		if (n < maxConnect - 1)	ssql += QString ("where %1>=%2 and %3<%4").arg(nameRNM).arg (n_beg).arg(nameRNM).arg (n_end);
-		else					ssql += QString ("where %1>=%2").arg(nameRNM).arg (n_beg);
+		if (maxConnect != 1) {
+			n_end		= n_beg + n_step;			// so the database client loads the entire network channel			
+			if (n < maxConnect - 1)	ssql += QString ("where %1>=%2 and %3<%4").arg(nameRNM).arg (n_beg).arg(nameRNM).arg (n_end);
+			else					ssql += QString ("where %1>=%2").arg(nameRNM).arg (n_beg);
+		}
+		else {
+		}
 
 		n_beg			= n_end;
 		pThr[n].tsql	= ssql;
@@ -851,7 +898,7 @@ int GetDataTable(QList<QSqlDatabase*> m_db, QString SqlDrv, tabcol*	m_tabcol, li
 	QDateTime timeSql = QDateTime::currentDateTime();
 
 	for (int nn=0; nn < maxConnect; nn++) 		pThr[nn].start();	
-	for (int nn=0; nn < maxConnect; nn++)		pThr[nn].wait();	
+	for (int nn=0; nn < maxConnect; nn++)		pThr[nn].wait();	// waiting for all threads
 
 	int ThrWorks = timeSql.msecsTo(QDateTime::currentDateTime());
 	if (ThrWorks < 1000)	sprintf(txtTime, "%d msec", ThrWorks);
@@ -861,6 +908,7 @@ int GetDataTable(QList<QSqlDatabase*> m_db, QString SqlDrv, tabcol*	m_tabcol, li
 	int CodErr  = 0;
 	QString Err = "", ErrSql = "";
 	for (int nn = 0; nn < maxConnect; nn++) {	
+		// if one of the threads did not fulfill the database request - stop!
 		if (pThr[nn].CodeErr != 0) {
 			CodErr  = pThr[nn].CodeErr;
 			Err		= pThr[nn].DbErr;
@@ -871,12 +919,14 @@ int GetDataTable(QList<QSqlDatabase*> m_db, QString SqlDrv, tabcol*	m_tabcol, li
 		if (pThr[0].m_lines.b_Unsuppt == true && nn == 0) 
 			unsupp = pThr[0].m_lines.ColUnsupp;
 			
+		// save data from all threads to the output-list
 		m_lines->m_crcline.append(pThr[nn].m_lines.m_crcline);
 		m_lines->m_tabdata.append(pThr[nn].m_lines.m_tabdata);
 		if (m_lines->m_typeCol.size() == 0) {
 			m_lines->m_typeCol.append(pThr[nn].m_lines.m_typeCol);
 			m_lines->m_nameCol.append(pThr[nn].m_lines.m_nameCol);
 		}
+		// free
 		pThr[nn].m_lines.m_crcline.clear();
 		pThr[nn].m_lines.m_tabdata.clear();
 		pThr[nn].m_lines.m_typeCol.clear();
@@ -960,9 +1010,15 @@ QList <QSqlDatabase*> GetDb(QString db, QString drv, QStringList& list, const ch
 int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
-	QCoreApplication::setApplicationName("Db Synchro");
-	QCoreApplication::setApplicationVersion(QString("%1.%2").arg(FVERSION_MAJOR).arg(FVERSION_MINOR)); 
 
+#ifdef _WIN32
+	// system("@chcp 65001");
+	setlocale(LC_ALL, ".65001");
+	QTextCodec::setCodecForLocale  (QTextCodec::codecForName("UTF-8"));
+#endif
+
+	QCoreApplication::setApplicationName("Db Synchro");
+	QCoreApplication::setApplicationVersion(QString("%1.%2").arg(FVERSION_MAJOR).arg(FVERSION_MINOR)); // 2022-11-23
 	QCommandLineParser parser;
 	parser.setApplicationDescription("Data synchronization utility in tables of two databases.");
 	parser.addHelpOption();
@@ -995,9 +1051,13 @@ int main(int argc, char *argv[])
 	parser.addOption  (showMaxConnect);
 	parser.addOption  (showMaxLineWdt);
 	parser.addOption  (saveDebugInfo);
-	parser.process(a);
 
-	const QStringList args	= parser.positionalArguments();	
+	printf ("LeonSoft - %s %s\n\n", qPrintable(QCoreApplication::applicationName()), qPrintable(QCoreApplication::applicationVersion()));
+
+	// тут может вылететь, например на ключе -v
+	parser.process(a);// Process the actual command line arguments given by the user
+
+	const QStringList args	= parser.positionalArguments();	// db connection
 	if (args.size() != 5) {
 		parser.showHelp();
 		return -1;
@@ -1034,7 +1094,7 @@ int main(int argc, char *argv[])
 		if (dlist.size() >= 5) ddb_alias += "*" + dlist.at(4);
 	}
 
-	// path for the log-file 
+	// for log-file (path)
 	QDir dir;
 	QString		fp  = dir.absoluteFilePath(targetFile).replace("\\", "/");
 	int     indxlog = fp.lastIndexOf(".");
@@ -1047,14 +1107,14 @@ int main(int argc, char *argv[])
 		err = 0; int linen = 0;
 		while (!file.atEnd()) {
 
-			QString str = QString::fromUtf8 (file.readLine());	
+			QString str = QString::fromUtf8 (file.readLine());	// 2022 uft8 file
 			str			= str.trimmed();
 
 			filetab.append(str);
 			if (linen++ <= 2 && str.isEmpty() == true)	
 				err = -3;
 		}
-		file.close();	
+		file.close();	// fix
 	}
 	if (err != 0 || filetab.size() < 3) {
 		printf ("Error in 'TableFile' (#line. description): \n");
@@ -1070,26 +1130,62 @@ int main(int argc, char *argv[])
 		return -2;
 	}
 
-
 #ifdef WIN32
-	QString  syspath1 = QCoreApplication::applicationDirPath();
-	QDir dr (syspath1); 
-	dr.cdUp();
-	QString  syspath2 = dr.path();
-	dr.cdUp();
-	QString  syspath3 = dr.path();
+	{
+		QString  syspath1 = QCoreApplication::applicationDirPath();
+		QDir dr (syspath1);
+		dr.cdUp();
+		QString  syspath2 = dr.path();
+		dr.cdUp();
+		QString  syspath3 = dr.path();
 
-	QString t	= qEnvironmentVariable("PATH");
-	QString ora	= syspath1 + "/DbInstance/oracle;" + syspath2 + "/DbInstance/oracle;"+ syspath3 + "/DbInstance/oracle;";
-	QString psq	= syspath1 + "/DbInstance/psql;"   + syspath2 + "/DbInstance/psql;"  + syspath3 + "/DbInstance/psql;";
-	QString tot	= ora + psq + t;
-	tot = tot.replace ("/", "\\");
-	bool bSetPath = qputenv ("PATH", tot.toLocal8Bit());
-	t	          = qEnvironmentVariable("PATH");
+		QString t	= qEnvironmentVariable("PATH");
+		QString ora	= syspath1 + "/DbInstance/oracle;" + syspath2 + "/DbInstance/oracle;" + syspath3 + "/DbInstance/oracle;";
+		QString psq	= syspath1 + "/DbInstance/psql;" + syspath2 + "/DbInstance/psql;" + syspath3 + "/DbInstance/psql;";
+		QString tot	= ora + psq + t;
+		tot = tot.replace ("/", "\\");
+		bool bSetPath = qputenv ("PATH", tot.toLocal8Bit());
+		t	          = qEnvironmentVariable("PATH");
+	}
 #endif
 
+	//
+#ifdef WIN32
+	{
+		void*     p   = nullptr;
+		QString s86   = (sizeof(p) == 4) ? "/dbinstance/32" : "/dbinstance/64";
+		QString pOra  = s86 + "/oracle";
+		QString pPsq  = s86 + "/postgresql";
+		bool bOraPath = false;
+		bool bPsqPath = false;
+		QSettings settings2 ("HKEY_CURRENT_USER\\Software\\Leonsoft", QSettings::NativeFormat);
+		QVariant  varPathO = settings2.value(pOra);
+		if (varPathO.isValid() == false || varPathO.toString().isEmpty() == true) {
+			settings2.setValue(pOra, " ");
+		} else {
+			QDir dirO (varPathO.toString());
+			bOraPath = dirO.exists();
+		}
+		QVariant  varPathP = settings2.value(pPsq);
+		if (varPathP.isValid() == false || varPathP.toString().isEmpty() == true) {
+			settings2.setValue(pPsq, " ");
+		} else {
+			QDir dirP (varPathP.toString());
+			bPsqPath = dirP.exists();
+		}
+
+		QString t	= qEnvironmentVariable("PATH");
+		if (bOraPath == true) { t = varPathO.toString() + ";" + t; }
+		if (bPsqPath == true) { t = varPathP.toString() + ";" + t; }
+		t = t.replace ("/", "\\");
+		qputenv ("PATH", t.toLocal8Bit());
+	}
+#endif
+
+
+
 #ifdef CRASH_ON
-	CR_INSTALL_INFOA info;  memset(&info, 0, sizeof(CR_INSTALL_INFOA));  
+	CR_INSTALL_INFOA info; memset(&info, 0, sizeof(CR_INSTALL_INFOA));  
 
 	int xpos;
 	QString logsPath = ((xpos=pathlog.lastIndexOf('/')) > 0) ? pathlog.mid(0, xpos) : QCoreApplication::applicationDirPath();
@@ -1101,22 +1197,22 @@ int main(int argc, char *argv[])
 	char XX6[450];  strcpy (XX6, qPrintable(langPath));
 	char XX7[450];  strcpy (XX7, qPrintable(logsPath));
 
-	info.cb							= sizeof(CR_INSTALL_INFO);    
-	info.pszAppName					= XX3;  
-	info.pszAppVersion				= XX2;  
-	info.pszLangFilePath			= XX6;
-	info.pszErrorReportSaveDir		= XX7;
-	info.pfnCrashCallback			= CrashCallback;   
-	info.uPriorities[CR_HTTP]		= CR_NEGATIVE_PRIORITY; 
-	info.uPriorities[CR_SMTP]		= CR_NEGATIVE_PRIORITY;	
-	info.uPriorities[CR_SMAPI]		= CR_NEGATIVE_PRIORITY;	
-	info.dwFlags |= CR_INST_ALL_POSSIBLE_HANDLERS;
-	info.dwFlags |= CR_INST_HTTP_BINARY_ENCODING; 
-	info.dwFlags |= CR_INST_SEND_QUEUED_REPORTS; 
-	info.dwFlags |= CR_INST_DONT_SEND_REPORT;
-	info.dwFlags |= CR_INST_NO_GUI;
-	int nResult = crInstallA(&info);
-	if (nResult != 0)	{   
+	info.cb						  = sizeof(CR_INSTALL_INFO);    
+	info.pszAppName				  = XX3;  
+	info.pszAppVersion			  = XX2;  
+	info.pszLangFilePath		  = XX6;
+	info.pszErrorReportSaveDir	  = XX7;
+	info.pfnCrashCallback		  = CrashCallback;   
+	info.uPriorities[CR_HTTP]	  = CR_NEGATIVE_PRIORITY;  
+	info.uPriorities[CR_SMTP]	  = CR_NEGATIVE_PRIORITY;	
+	info.uPriorities[CR_SMAPI]	  = CR_NEGATIVE_PRIORITY;	
+	info.dwFlags				 |= CR_INST_ALL_POSSIBLE_HANDLERS;
+	info.dwFlags				 |= CR_INST_HTTP_BINARY_ENCODING; 
+	info.dwFlags				 |= CR_INST_SEND_QUEUED_REPORTS; 
+	info.dwFlags				 |= CR_INST_DONT_SEND_REPORT;
+	info.dwFlags				 |= CR_INST_NO_GUI;
+	int nResult = crInstallA(&info);	
+	if (nResult != 0)	{ 
 		char szErrorMsg[512]; szErrorMsg[0] = 0;
 		crGetLastErrorMsgA	 (szErrorMsg, 511);    
 		printf("%s\n",		  szErrorMsg);    
@@ -1134,14 +1230,15 @@ int main(int argc, char *argv[])
 	m_tabcol.col	= filetab.at(0).split(",", QString::SkipEmptyParts);
 	m_tabcol.colkey = filetab.at(1).split(",", QString::SkipEmptyParts);
 	m_tabcol.tab	= filetab.at(2);
-	m_tabcol.where  =(filetab.size() > 3) ? filetab.at(3) : "";
-	m_tabcol.trigg  =(filetab.size() > 4) ? filetab.at(4).split(",", QString::SkipEmptyParts) : QStringList();
+	m_tabcol.where  = (filetab.size() > 3) ? filetab.at(3) : "";
+	m_tabcol.trigg  = (filetab.size() > 4) ? filetab.at(4).split(",", QString::SkipEmptyParts) : QStringList();
 #endif
 
+	// get key column indexes
 	for (int t = 0; t < m_tabcol.colkey.size(); t++) {
 		for (int m = 0; m < m_tabcol.col.size(); m++) {
 			if (m_tabcol.colkey.at(t).compare(m_tabcol.col.at(m), Qt::CaseInsensitive) == 0)
-				m_tabcol.poskey.append(m);	
+				m_tabcol.poskey.append(m);	// key column position
 		}
 	}
 
@@ -1196,11 +1293,16 @@ int main(int argc, char *argv[])
 	bool bChngeTrg = true;
 	if ((m_tabcol.bIgnAll == true) ||	// all ignore
 		(m_tabcol.bIgnIns == true && m_tabcol.bIgnDel == true && m_tabcol.bIgnUpd == true)) bChngeTrg = false;
+
 	if (m_tabcol.trigg.size() > 0      &&
 		m_tabcol.bIgnTRG      != true  &&
 		bChngeTrg		      == true)	
 	{
 		printf ("Attention! You must have rights to disable trigger(s).\n\n");
+	}
+
+	if (bChngeTrg == false) {
+		printf ("\n*** CHECK ONLY ***\n\n");
 	}
 
 	// for debug

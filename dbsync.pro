@@ -9,8 +9,7 @@ TEMPLATE = app
 TARGET  = DbSync
 CONFIG += release console 
 CONFIG -= debug
-
-CONFIG+=c++1z	# C++17 - crashrep
+CONFIG +=c++1z	# C++17 - crashrep
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
@@ -28,7 +27,6 @@ contains(DEFINES, CRASH_ON) {
   TARGET  = DbSyncEx  
 }
 
-LIBS += -L"."
 
 UI_DIR         = tmp
 QRC_DIR        = tmp
@@ -47,9 +45,12 @@ win32 {
   win32:UI_DIR         = tmp
   win32:QRC_DIR        = tmp
   win32:RCC_DIR        = tmp
-  DESTDIR = ../app
-  QTDIR_build:DESTDIR = ../app
+  DESTDIR              = $(DDIR)
+  QTDIR_build:DESTDIR  = $(DDIR)
+  message(The project will be installed in $(DDIR))
   RC_FILE  = resource.rc
+
+  message(VS2008: SEH on)
   QMAKE_CXXFLAGS_EXCEPTIONS_OFF =
   QMAKE_CXXFLAGS_STL_OFF =
   QMAKE_CXXFLAGS_EXCEPTIONS_ON =
@@ -68,22 +69,16 @@ win32 {
 	unix:OBJECTS_DIR    = tmp
 	unix:UI_HEADERS_DIR = tmp
 	unix:UI_SOURCES_DIR = tmp	
-    unix:UI_DIR         = tmp
-    unix:QRC_DIR        = tmp
-    unix:RCC_DIR        = tmp
+        unix:UI_DIR         = tmp
+        unix:QRC_DIR        = tmp
+        unix:RCC_DIR        = tmp
 	
 	DEFINES -= WIN32
-	DESTDIR = ../app
-	QTDIR_build:DESTDIR = ../app
-    CONFIG += plugin
-    CONFIG += warn_off
-    DEFINES-= DISTRIB
-
-	QMAKE_CXXFLAGS         += -g
-	QMAKE_CXXFLAGS_RELEASE -= -O2
-	QMAKE_CFLAGS_RELEASE   -= -O2
-	QMAKE_CXXFLAGS_RELEASE += -O0
-	QMAKE_CFLAGS_RELEASE   += -O0 	
+	DESTDIR = ../app474
+	QTDIR_build:DESTDIR = ../app474
+        CONFIG += plugin
+	CONFIG += warn_off
+        DEFINES-= DISTRIB
 }
 
 
